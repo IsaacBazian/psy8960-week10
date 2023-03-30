@@ -62,7 +62,7 @@ modelRandomForest <- train(
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
-  tuneLength = 3 #Still working on making this not take so long
+  tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster
 )
 
 
