@@ -14,29 +14,56 @@ gss_tbl_original <- read_sav(file = "../data/GSS2016.sav") %>%
 #This code identifies the variables in the previous tibble with 75% or more missingness
 missing_75 <- colMeans(is.na(gss_tbl_original)) >= .75
 
-#This code subsets the tibble to include only those columns with less than 75% missingness
-gss_tbl <- gss_tbl_original[,!missing_75]
+#This code subsets the tibble to include only those columns with less than 75% missingness and renames HRS1 to workhours
+gss_tbl <- gss_tbl_original[,!missing_75] %>% 
+  rename(workhours = HRS1)
 
 
 ## Visualization
-#This code makes a histogram of the HRS1 variable with descriptive axes titles
-ggplot(gss_tbl, aes(x = HRS1)) +
+#This code makes a histogram of the workhours variable with descriptive axes titles
+ggplot(gss_tbl, aes(x = workhours)) +
   geom_histogram() +
   labs(x = "Number of Hours Worked Last Week", y = "Number of Respondents")
 
 ## Analysis
-#This code randomizes the order of the data, then splits the data into training and testing sets with a 75/25 split
+#This code randomizes the order of the data, then splits the data into training and testing sets with a 75/25 split, and creates training folds
 gss_shuffled_tbl <- gss_tbl[sample(nrow(gss_tbl)),]
 split75 <- round(nrow(gss_shuffled_tbl) * .75)
 gss_train_tbl <- gss_shuffled_tbl[1:split75,]
 gss_test_tbl <- gss_shuffled_tbl[(split75 + 1):nrow(gss_shuffled_tbl),]
+training_folds <- createFolds(gss_train_tbl$workhours, 10)
 
 
 
+modelOLS <- train(
+  workhours ~ .,
+  sapply(gss_train_tbl, as.numeric), #Making all variables numeric seems to fix an error I was getting before, "wrong model type for classification"
+  method = "lm",
+  na.action = na.pass,
+  preProcess = "medianImpute",
+  trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
+)
 
 
+modelElasticNet <- train(
+  workhours ~ .,
+  sapply(gss_train_tbl, as.numeric),
+  method = "glmnet",
+  na.action = na.pass,
+  preProcess = "medianImpute",
+  trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
+)
 
 
+modelRandomForest <- train(
+  workhours ~ .,
+  sapply(gss_train_tbl, as.numeric),
+  method = "ranger",
+  na.action = na.pass,
+  preProcess = "medianImpute",
+  trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
+  tuneLength = 3 #Still working on making this not take so long
+)
 
 
 
