@@ -34,7 +34,7 @@ gss_test_tbl <- gss_shuffled_tbl[(split75 + 1):nrow(gss_shuffled_tbl),]
 training_folds <- createFolds(gss_train_tbl$workhours, 10)
 
 
-
+# This code fits a model predicting workhours from all other variables using OLS regression
 modelOLS <- train(
   workhours ~ .,
   sapply(gss_train_tbl, as.numeric), #Making all variables numeric seems to fix an error I was getting before, "wrong model type for classification"
@@ -44,7 +44,7 @@ modelOLS <- train(
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
 )
 
-
+# This code fits a model predicting workhours from all other variables using elastic net
 modelElasticNet <- train(
   workhours ~ .,
   sapply(gss_train_tbl, as.numeric),
@@ -54,7 +54,7 @@ modelElasticNet <- train(
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
 )
 
-
+# This code fits a model predicting workhours from all other variables using a random forest
 modelRandomForest <- train(
   workhours ~ .,
   sapply(gss_train_tbl, as.numeric),
@@ -65,7 +65,7 @@ modelRandomForest <- train(
   tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster
 )
 
-
+# This code fits a model predicting workhours from all other variables using extreme gradient boosting
 modelXGB <- train(
   workhours ~ .,
   sapply(gss_train_tbl, as.numeric),
@@ -75,6 +75,22 @@ modelXGB <- train(
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
   tuneLength = 3 #Still working on making this not take so long
 )
+
+
+## Publication
+table1_tbl <- tibble(
+  algo = c("OLS Regression", "Elastic Net", "Random Forest", "eXtreme Gradient Boosting"),
+  cv_rsq = c("", "", "", ""),
+  ho_rsq = c("", "", "", "")
+)
+
+modelOLS$results$Rsquared
+modelElasticNet$results$Rsquared
+
+
+
+
+
 
 
 
