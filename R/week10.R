@@ -13,3 +13,14 @@ missing_75 <- colMeans(is.na(gss_tbl_original)) >= .75
 
 #This code subsets the tibble to include only those columns with less than 75% missingness
 gss_tbl <- gss_tbl_original[,!missing_75]
+
+
+## Visualization
+ggplot(gss_tbl, aes(x = HRS1)) +
+  geom_histogram() +
+  labs(x = "Number of Hours Worked Last Week")
+
+
+
+
+
