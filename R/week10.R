@@ -69,7 +69,7 @@ modelRandomForest <- train(
 modelXGB <- train(
   workhours ~ .,
   sapply(gss_train_tbl, as.numeric),
-  method = "xgbDART",
+  method = "xgbLinear",
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
