@@ -14,10 +14,13 @@ gss_tbl_original <- read_sav(file = "../data/GSS2016.sav") %>%
 #This code identifies the variables in the previous tibble with 75% or more missingness
 missing_75 <- colMeans(is.na(gss_tbl_original)) >= .75
 
-#This code subsets the tibble to include only those columns with less than 75% missingness and renames HRS1 to workhours
+#This code subsets the tibble to include only those columns with less than 75% missingness,
+#makes all variables numeric (which fixes an error I got before, "wrong model for classification"),
+#makes it a tibble again and renames HRS1 to workhours
 gss_tbl <- gss_tbl_original[,!missing_75] %>% 
+  sapply(as.numeric) %>% 
+  as_tibble() %>% 
   rename(workhours = HRS1)
-
 
 ## Visualization
 #This code makes a histogram of the workhours variable with descriptive axes titles
@@ -37,7 +40,7 @@ training_folds <- createFolds(gss_train_tbl$workhours, 10)
 # This code fits a model predicting workhours from all other variables using OLS regression
 modelOLS <- train(
   workhours ~ .,
-  sapply(gss_train_tbl, as.numeric), #Making all variables numeric seems to fix an error I was getting before, "wrong model type for classification"
+  gss_train_tbl,
   method = "lm",
   na.action = na.pass,
   preProcess = "medianImpute",
@@ -47,7 +50,7 @@ modelOLS <- train(
 # This code fits a model predicting workhours from all other variables using elastic net
 modelElasticNet <- train(
   workhours ~ .,
-  sapply(gss_train_tbl, as.numeric),
+  gss_train_tbl,
   method = "glmnet",
   na.action = na.pass,
   preProcess = "medianImpute",
@@ -57,7 +60,7 @@ modelElasticNet <- train(
 # This code fits a model predicting workhours from all other variables using a random forest
 modelRandomForest <- train(
   workhours ~ .,
-  sapply(gss_train_tbl, as.numeric),
+  gss_train_tbl,
   method = "ranger",
   na.action = na.pass,
   preProcess = "medianImpute",
@@ -68,7 +71,7 @@ modelRandomForest <- train(
 # This code fits a model predicting workhours from all other variables using extreme gradient boosting
 modelXGB <- train(
   workhours ~ .,
-  sapply(gss_train_tbl, as.numeric),
+  gss_train_tbl,
   method = "xgbLinear",
   na.action = na.pass,
   preProcess = "medianImpute",
@@ -86,8 +89,8 @@ table1_tbl <- tibble(
 
 modelOLS$results$Rsquared
 modelElasticNet$results$Rsquared
-
-
+cor(predict(modelOLS, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
+cor(predict(modelElasticNet, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
 
 
 
