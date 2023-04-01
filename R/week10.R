@@ -65,7 +65,8 @@ modelRandomForest <- train(
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
-  tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster
+  tuneLength = 3
+  #tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster
 )
 
 # This code fits a model predicting workhours from all other variables using extreme gradient boosting
@@ -81,18 +82,50 @@ modelXGB <- train(
 
 
 ## Publication
+# This code makes a tibble. I hard code in the names of the models, code in the 
+# k-fold CV R^2 for each model, and dynamically generate the holdout CV R^2 for
+# each model.
 table1_tbl <- tibble(
   algo = c("OLS Regression", "Elastic Net", "Random Forest", "eXtreme Gradient Boosting"),
-  cv_rsq = c("", "", "", ""),
-  ho_rsq = c("", "", "", "")
-)
+  cv_rsq = c(".68", ".72", ".91", ".95"),
+  ho_rsq = c(
+    str_remove(format(round(cor(predict(modelOLS, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(cor(predict(modelElasticNet, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(cor(predict(modelRandomForest, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(cor(predict(modelXGB, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0")
+  )
+) #Need to figure out how to dynamically get cv_rsq, rather than calling each model, finding the Rsquared of the selected model, and hardcoding
 
-modelOLS$results$Rsquared
-modelElasticNet$results$Rsquared
-cor(predict(modelOLS, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
-cor(predict(modelElasticNet, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
-cor(predict(modelRandomForest, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
-cor(predict(modelXGB, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2
+
+# Q1: Results did change considerably between models, such that cv_rsq differed 
+# between models: OLS < Elastic Net < Random Forest < XGB. ho_rsq also changed
+# between models: OLS < Elastic Net < XGB < Random Forest. This happens because
+# each of the algorithms make predictions with different underlying models -
+# OLS, being the simplest, produces the least impressive results, while more
+# sophisticated algorithms like Random Forest consider more things about the data
+# to produce better predictions.
+
+# Q2: Holdout CV was lower than k-fold CV across algorithms. This makes sense -
+# the models will, to a certain extent, be optimized to the peculiarities
+# of the training data, generally leading to overfitting. When we apply the
+# models to new data, they appear to perform less well, as they are no longer
+# taking advantage of the chance patterns in the training data.
+
+# Q3: Of these four models, I would generally use Random Forest. In this data,
+# it produced the highest ho_rsq, which is what we actually care about for
+# making predictions with new data. However, there are some trade-offs: compared
+# to OLS and Elastic Net, the Random Forest model took much longer to train. On
+# a similar note, it is actually possible that XGB could produce even higher
+# ho_rsq, but this would also be at greater computational cost - I originally
+# tried running the XGB models with xgbDart, but due to the high number of
+# hyperparameters, it was taking an extremely long time, so I elected to use
+# xgbLinear instead, due to the lower number of hyperparameters. If I used
+# xgbDART or xgbTree, maybe I could get better predictions, but using such
+# computationally expensive models was impractical in this case. Therefore,
+# a Random Forest model appears to give relatively good prediction without
+# taking an unreasonable amount of time to train. If time/computing power was
+# less of a concern, I would see if other kinds of XGB gave better predictions
+# and, if so, would consider using that model instead.
 
 
 
