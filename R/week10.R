@@ -29,6 +29,11 @@ ggplot(gss_tbl, aes(x = workhours)) +
   labs(x = "Number of Hours Worked Last Week", y = "Number of Respondents")
 
 ## Analysis
+# Note that in this section, I chose to have the final model selected based on
+# Rsquared. I did this because the Publication section seems mostly interested
+# in the Rsquared values of the final models, so it seemed reasonable to choose
+# final models on that basis.
+
 #This code randomizes the order of the data, then splits the data into training and testing sets with a 75/25 split, and creates training folds
 gss_shuffled_tbl <- gss_tbl[sample(nrow(gss_tbl)),]
 split75 <- round(nrow(gss_shuffled_tbl) * .75)
@@ -42,6 +47,7 @@ modelOLS <- train(
   workhours ~ .,
   gss_train_tbl,
   method = "lm",
+  metric = "Rsquared",
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
@@ -52,6 +58,7 @@ modelElasticNet <- train(
   workhours ~ .,
   gss_train_tbl,
   method = "glmnet",
+  metric = "Rsquared",
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T)
@@ -62,6 +69,7 @@ modelRandomForest <- train(
   workhours ~ .,
   gss_train_tbl,
   method = "ranger",
+  metric = "Rsquared",
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
@@ -74,6 +82,7 @@ modelXGB <- train(
   workhours ~ .,
   gss_train_tbl,
   method = "xgbLinear",
+  metric = "Rsquared",
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
@@ -82,12 +91,18 @@ modelXGB <- train(
 
 
 ## Publication
-# This code makes a tibble. I hard code in the names of the models, code in the 
-# k-fold CV R^2 for each model, and dynamically generate the holdout CV R^2 for
-# each model.
+# This code makes a tibble. I hard code in the names of the models, and 
+# dynamically generate the k-fold CV R^2 and the holdout CV R^2 for each model.
+# Choosing the final models based on R^2 ensures that the highest R^2 in each
+# model's results corresponds to the final model.
 table1_tbl <- tibble(
   algo = c("OLS Regression", "Elastic Net", "Random Forest", "eXtreme Gradient Boosting"),
-  cv_rsq = c(".68", ".72", ".91", ".95"),
+  cv_rsq = c(
+    str_remove(format(round(modelOLS$results$Rsquared, 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(max(modelElasticNet$results$Rsquared), 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(max(modelRandomForest$results$Rsquared), 2), nsmall = 2), pattern = "^0"),
+    str_remove(format(round(max(modelXGB$results$Rsquared), 2), nsmall = 2), pattern = "^0")
+  ),
   ho_rsq = c(
     str_remove(format(round(cor(predict(modelOLS, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
     str_remove(format(round(cor(predict(modelElasticNet, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
@@ -126,7 +141,6 @@ table1_tbl <- tibble(
 # taking an unreasonable amount of time to train. If time/computing power was
 # less of a concern, I would see if other kinds of XGB gave better predictions
 # and, if so, would consider using that model instead.
-
 
 
 
