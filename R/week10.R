@@ -74,7 +74,7 @@ modelRandomForest <- train(
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
   tuneLength = 3
-  #tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster
+  #tuneGrid = expand.grid(mtry = c(2, 10, 50, 100, 200), splitrule = c("variance", "extratrees"), min.node.size = 5) #This seems to run a little faster. Commented out, as just letting tuneLength run wasn't that bad in the end
 )
 
 # This code fits a model predicting workhours from all other variables using extreme gradient boosting
@@ -86,7 +86,7 @@ modelXGB <- train(
   na.action = na.pass,
   preProcess = "medianImpute",
   trControl = trainControl(method="cv", indexOut = training_folds, number = 10, search = "grid", verboseIter=T),
-  tuneLength = 3 #Still working on making this not take so long
+  tuneLength = 3
 )
 
 
@@ -109,7 +109,10 @@ table1_tbl <- tibble(
     str_remove(format(round(cor(predict(modelRandomForest, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0"),
     str_remove(format(round(cor(predict(modelXGB, gss_test_tbl, na.action = na.pass), gss_test_tbl$workhours)^2, 2), nsmall = 2), pattern = "^0")
   )
-) #Need to figure out how to dynamically get cv_rsq, rather than calling each model, finding the Rsquared of the selected model, and hardcoding
+) 
+# The dynamic values are rounded to 2 decimals, format is used to ensure two numbers
+# after the decimal even if round would drop trailing zeros, and str_remove finds
+# the single leading zero and removes it.
 
 
 # Q1: Results did change considerably between models, such that cv_rsq differed 
